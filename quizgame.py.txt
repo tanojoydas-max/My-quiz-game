@@ -1,0 +1,124 @@
+import random
+from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+
+# 5 Questions per section layout
+DATA = {
+    "GK": [
+        {"q": "Largest ocean?", "a": ["Pacific", "Atlantic", "Indian"], "c": "Pacific"},
+        {"q": "Capital of France?", "a": ["Paris", "London", "Berlin"], "c": "Paris"},
+        {"q": "Red Planet?", "a": ["Mars", "Venus", "Jupiter"], "c": "Mars"},
+        {"q": "Colors in rainbow?", "a": ["7", "6", "8"], "c": "7"},
+        {"q": "Hardest substance?", "a": ["Diamond", "Iron", "Gold"], "c": "Diamond"}
+    ],
+    "Sports": [
+        {"q": "Soccer team size?", "a": ["11", "9", "10"], "c": "11"},
+        {"q": "What uses 'Home Run'?", "a": ["Baseball", "Cricket", "Tennis"], "c": "Baseball"},
+        {"q": "Uses a shuttlecock?", "a": ["Badminton", "Tennis", "Squash"], "c": "Badminton"},
+        {"q": "Marathon miles?", "a": ["26", "20", "30"], "c": "26"},
+        {"q": "First World Cup winner?", "a": ["Uruguay", "Brazil", "Italy"], "c": "Uruguay"}
+    ],
+    "Maths": [
+        {"q": "12 * 12?", "a": ["144", "124", "134"], "c": "144"},
+        {"q": "Square root of 64?", "a": ["8", "6", "7"], "c": "8"},
+        {"q": "25 + 4 * 5?", "a": ["45", "145", "34"], "c": "45"},
+        {"q": "Hexagon sides?", "a": ["6", "5", "8"], "c": "6"},
+        {"q": "15% of 200?", "a": ["30", "20", "40"], "c": "30"}
+    ],
+    "English Grammar": [
+        {"q": "Noun: 'The brown dog barked.'", "a": ["dog", "barked", "brown"], "c": "dog"},
+        {"q": "Past tense of 'Go'?", "a": ["went", "gone", "going"], "c": "went"},
+        {"q": "Which is a conjunction?", "a": ["but", "run", "under"], "c": "but"},
+        {"q": "Correct spelling?", "a": ["Receive", "Recieve", "Receve"], "c": "Receive"},
+        {"q": "Antonym for 'Giant'?", "a": ["Tiny", "Huge", "Large"], "c": "Tiny"}
+    ],
+    "Guess My Name": [
+        {"q": "Clue: Wears red cape, shoots spiderwebs.", "a": ["Spider-Man", "Batman", "Superman"], "c": "Spider-Man"},
+        {"q": "Clue: AI Assistant typing commands.", "a": ["AI", "Chef", "Doctor"], "c": "AI"},
+        {"q": "Clue: Wears white coat, stethoscope.", "a": ["Doctor", "Pilot", "Lawyer"], "c": "Doctor"},
+        {"q": "Clue: Lives in a tower, super long hair.", "a": ["Rapunzel", "Cinderella", "Elsa"], "c": "Rapunzel"},
+        {"q": "Clue: Bat mask, protects Gotham.", "a": ["Batman", "Thor", "Hulk"], "c": "Batman"}
+    ],
+    "History": [
+        {"q": "First US President?", "a": ["Washington", "Lincoln", "Jefferson"], "c": "Washington"},
+        {"q": "Where are the Pyramids?", "a": ["Egypt", "Greece", "Italy"], "c": "Egypt"},
+        {"q": "Famous ship that sank in 1912?", "a": ["Titanic", "Britannic", "Olympic"], "c": "Titanic"},
+        {"q": "Discovered gravity with an apple?", "a": ["Newton", "Einstein", "Galileo"], "c": "Newton"},
+        {"q": "World War 2 ended in?", "a": ["1945", "1918", "1939"], "c": "1945"}
+    ]
+}
+
+class GameScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.box = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        self.add_widget(self.box)
+        self.questions = []
+        self.idx = 0
+        self.scores = {k: 0 for k in DATA.keys()}
+        
+        # Pick exactly 2 random questions from each category
+        for cat, q_list in DATA.items():
+            for q in random.sample(q_list, 2):
+                q['cat'] = cat
+                self.questions.append(q)
+        random.shuffle(self.questions)
+        self.show_q()
+
+    def show_q(self):
+        self.box.clear_widgets()
+        if self.idx >= len(self.questions):
+            self.show_results()
+            return
+            
+        q = self.questions[self.idx]
+        self.box.add_widget(Label(text=f"Category: {q['cat']} ({self.idx+1}/12)", size_hint_y=0.1))
+        self.box.add_widget(Label(text=q['q'], font_size='18sp', size_hint_y=0.3))
+        
+        opts = list(q['a'])
+        random.shuffle(opts)
+        for o in opts:
+            btn = Button(text=o, size_hint_y=0.2)
+            btn.bind(on_press=lambda i, choice=o, correct=q['c'], cat=q['cat']: self.nxt(choice, correct, cat))
+            self.box.add_widget(btn)
+
+    def nxt(self, choice, correct, cat):
+        if choice == correct:
+            self.scores[cat] += 1
+        self.idx += 1
+        self.show_q()
+
+    def show_results(self):
+        self.box.clear_widgets()
+        self.box.add_widget(Label(text="🏆 Results 🏆", font_size='24sp', size_hint_y=0.2))
+        
+        for cat, score in self.scores.items():
+            stars = "⭐⭐⭐" if score == 2 else ("⭐" if score == 1 else "❌")
+            self.box.add_widget(Label(text=f"{cat}: {score}/2 -> {stars}", font_size='16sp'))
+            
+        btn = Button(text="Restart", size_hint_y=0.2)
+        btn.bind(on_press=self.reset)
+        self.box.add_widget(btn)
+
+    def reset(self, instance):
+        self.idx = 0
+        self.scores = {k: 0 for k in DATA.keys()}
+        self.questions = []
+        for cat, q_list in DATA.items():
+            for q in random.sample(q_list, 2):
+                q['cat'] = cat
+                self.questions.append(q)
+        random.shuffle(self.questions)
+        self.show_q()
+
+class QuizApp(App):
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(GameScreen(name='game'))
+        return sm
+
+if __name__ == '__main__':
+    QuizApp().run()
